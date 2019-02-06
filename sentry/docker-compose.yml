@@ -1,0 +1,55 @@
+version: "3.1"
+
+services:
+  redis:
+    image: "redis:5-alpine"
+    networks:
+      - sentry_net
+
+  postgres:
+    image: "postgres:11-alpine"
+    volumes:
+      - "./storage/postgres:/var/lib/postgresql/data"
+    environment:
+      POSTGRES_DB: &db-name "sentry"
+      POSTGRES_USER: &db-user "sentry"
+      POSTGRES_PASSWORD: &db-pass "y6l7HG7x#iAgr5yh"
+    networks:
+    - sentry_net
+
+  sentry:
+    <<: &sentry-config
+      image: "sentry:9"
+      volumes:
+        - "./storage/sentry:/var/lib/sentry/files"
+      depends_on:
+        - redis
+        - postgres
+      networks:
+      - sentry_net
+      environment:
+        SENTRY_SECRET_KEY: ""
+        SENTRY_SERVER_EMAIL: ""
+        SENTRY_EMAIL_HOST: ""
+        SENTRY_EMAIL_PORT: ""
+        SENTRY_EMAIL_USER: ""
+        SENTRY_EMAIL_PASSWORD: ""
+        SENTRY_EMAIL_USE_TLS: ""
+        SENTRY_REDIS_HOST: "redis"
+        SENTRY_POSTGRES_HOST: "postgres"
+        SENTRY_DB_NAME: *db-name
+        SENTRY_DB_USER: *db-user
+        SENTRY_DB_PASSWORD: *db-pass
+    ports:
+      - 9000:9000
+
+  sentry-cron:
+    <<: *sentry-config
+    command: "run cron"
+
+  sentry-worker-1:
+    <<: *sentry-config
+    command: "run worker"
+
+networks:
+  sentry_net:
